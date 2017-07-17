@@ -25,19 +25,10 @@ func (ts *testStruct) add(a, b int) int {
 }
 
 func assert(t *testing.T, expect, actual interface{}, err error) {
-	var eSlice bool
-	rt := reflect.TypeOf(expect)
-	switch rt.Kind() {
-	case reflect.Slice:
-		eSlice = true
-	default:
-		eSlice = false
-	}
-
 	if nil != err {
 		t.Errorf("%s", err)
-	} else if (eSlice && !reflect.DeepEqual(expect, actual)) && expect != actual {
-		t.Fatalf("expected %v, %v found", expect, actual)
+	} else if !reflect.DeepEqual(expect, actual) {
+		t.Errorf("expected %v, %v found", expect, actual)
 	}
 }
 
@@ -83,7 +74,7 @@ func makeFilteringModel() *Model {
 	return model
 }
 
-func TestNew(t *testing.T) {
+func TestNewModel(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 
@@ -98,7 +89,7 @@ func TestNew(t *testing.T) {
 	assert(t, expect, actual, nil)
 }
 
-func TestSetGet(t *testing.T) {
+func TestModelSetGet(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -134,7 +125,7 @@ func TestSetGet(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestData(t *testing.T) {
+func TestModelData(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -171,7 +162,7 @@ func TestData(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestDeleteHas(t *testing.T) {
+func TestModelDeleteHas(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -258,7 +249,7 @@ func TestDeleteHas(t *testing.T) {
 	assertError(t, expect, actual, err)
 }
 
-func TestEmpty(t *testing.T) {
+func TestModelIsEmpty(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 
@@ -267,11 +258,11 @@ func TestEmpty(t *testing.T) {
 	model.Set("emptyNil", nil)
 
 	expect = true
-	actual = model.Empty("emptyString")
+	actual = model.IsEmpty("emptyString")
 	assert(t, expect, actual, nil)
 
 	expect = true
-	actual = model.Empty("emptyNil")
+	actual = model.IsEmpty("emptyNil")
 	assert(t, expect, actual, nil)
 
 	model.Set("fullInt", 0)
@@ -280,29 +271,29 @@ func TestEmpty(t *testing.T) {
 	model.Set("fullFloat", 0.0)
 
 	expect = false
-	actual = model.Empty("fullInt")
+	actual = model.IsEmpty("fullInt")
 	assert(t, expect, actual, nil)
 
 	expect = false
-	actual = model.Empty("fullString1")
+	actual = model.IsEmpty("fullString1")
 	assert(t, expect, actual, nil)
 
 	expect = false
-	actual = model.Empty("fullString2")
+	actual = model.IsEmpty("fullString2")
 	assert(t, expect, actual, nil)
 
 	expect = false
-	actual = model.Empty("fullFloat")
+	actual = model.IsEmpty("fullFloat")
 	assert(t, expect, actual, nil)
 
 }
 
-func TestFilter(t *testing.T) {
+func TestModelFilter(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
 	var model *Model
-	var data map[string]interface{}
+	var data map[interface{}]interface{}
 
 	model = makeFilteringModel()
 	data = model.Filter(func(key, val interface{}) bool {
@@ -355,12 +346,121 @@ func TestFilter(t *testing.T) {
 
 }
 
-func TestStatic(t *testing.T) {
+func TestModelImport(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
 	var model *Model
-	//var data map[string]interface{}
+
+	//assert(t, expect, actual, err)
+	//jsonData := `[[{"key":"val","nest1":["key2","val2"]}],{"key3":"val3","key4":[1,2,3]}]`
+	//bytes := []byte(jsonData)
+	//var unmarshalledData interface{}
+	//err = json.Unmarshal(bytes, &unmarshalledData)
+	//assert(t, `[[{"key":"val","nest1":["key2","val2"]}],{"key3":"val3","key4":[1,2,3]}]`, unmarshalledData, err)
+	//return
+
+	jsonString := `[[{"key":"val","nest1":["key2","val2"]}],{"key3":"val3","key4":[5,1,3]}]`
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(jsonString)
+	modelJson, _ := model.JSON()
+	var unmarshalledData interface{}
+	bytes := []byte(jsonString)
+	err = json.Unmarshal(bytes, &unmarshalledData)
+	fmt.Printf("RESULT\n%v\n%v\n%v\n\n", jsonString, modelJson, unmarshalledData)
+	assert(t, jsonString, modelJson, err)
+	return
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`"word"`)
+	assert(t, expect, actual, err)
+	expect = `["word"]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`1`)
+	assert(t, expect, actual, err)
+	expect = `[1]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`[1]`)
+	assert(t, expect, actual, err)
+	expect = `[1]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`["word1", "word2"]`)
+	assert(t, expect, actual, err)
+	expect = `["word1","word2"]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`{"0":"word1","key":"word2"}`)
+	assert(t, expect, actual, err)
+	expect = `{"0":"word1","key":"word2"}`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`{"key":"val","nest1":{"key2":"val2"}}`)
+	expect = `{"key":"val","nest1":{"key2":"val2"}}`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`[{"key":"val","nest1":{"key2":"val2"}}]`)
+	expect = `[{"key":"val","nest1":{"key2":"val2"}}]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`[{"key":"val","nest1":["key2","val2"]}]`)
+	expect = `[{"key":"val","nest1":["key2","val2"]}]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`[[{"key":"val","nest1":["key2","val2"]}]]`)
+	expect = `[[{"key":"val","nest1":["key2","val2"]}]]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	model = new(Model)
+	expect = true
+	actual, err = model.Import(`[[{"key":"val","nest1":["key2","val2"]}],{"key3":"val3","key4":[1,2,3]}]`)
+	expect = `[[{"key":"val","nest1":["key2","val2"]}],{"key3":"val3","key4":[1,2,3]}]`
+	actual, err = model.JSON()
+	assert(t, expect, actual, err)
+
+	// Non-string keys should fail in objects
+	model = new(Model)
+	expect = fmt.Errorf(ErrorCannotDecodeJsonString)
+	_, actual = model.Import(`{"key":"word1",0:"word2"}`)
+	assert(t, expect, actual, err)
+
+}
+
+func TestModelStatic(t *testing.T) {
+	var expect interface{}
+	var actual interface{}
+	var err error
+	var model *Model
 
 	model = makeFilteringModel()
 	model.Set("Test", "Test")
@@ -400,7 +500,7 @@ func TestStatic(t *testing.T) {
 	}
 	assert(t, expect, actual, err)
 
-	tmp := make(map[string]interface{})
+	tmp := make(map[interface{}]interface{})
 	tmp["woot"] = 123
 	err = nil
 	expect = true
@@ -420,7 +520,7 @@ func TestStatic(t *testing.T) {
 
 	err = nil
 	expect = true
-	actual = model.SetUIDType(ConstTypeInt)
+	actual = model.SetUIDType(ConstIdentifierTypeInt)
 	if nil != actual {
 		actual = true
 	}
@@ -428,14 +528,14 @@ func TestStatic(t *testing.T) {
 
 	err = nil
 	expect = true
-	actual = model.SetUIDType(ConstTypeString)
+	actual = model.SetUIDType(ConstIdentifierTypeString)
 	if nil != actual {
 		actual = true
 	}
 	assert(t, expect, actual, err)
 }
 
-func TestJSON(t *testing.T) {
+func TestModelJSON(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -449,16 +549,16 @@ func TestJSON(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestKeys(t *testing.T) {
+func TestModelKeys(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
 	var model *Model
 
 	model = makeFilteringModel()
-	data := make([]string, len(model.Data()))
+	data := make([]string, 0)
 	for k := range model.Data() {
-		data = append(data, k)
+		data = append(data, k.(string))
 	}
 	sort.Strings(data)
 	expect = data
@@ -466,7 +566,7 @@ func TestKeys(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestLen(t *testing.T) {
+func TestModelLen(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -479,7 +579,7 @@ func TestLen(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestModels(t *testing.T) {
+func TestModelModels(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -493,7 +593,7 @@ func TestModels(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestMerge(t *testing.T) {
+func TestModelMerge(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -509,7 +609,7 @@ func TestMerge(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestReduce(t *testing.T) {
+func TestModelReduce(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -544,7 +644,7 @@ func TestReduce(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestReset(t *testing.T) {
+func TestModelReset(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -554,12 +654,12 @@ func TestReset(t *testing.T) {
 	model = makeFilteringModel()
 
 	model.Reset()
-	expect = make(map[string]interface{})
+	expect = make(map[interface{}]interface{})
 	actual = model.Data()
 	assert(t, expect, actual, err)
 }
 
-func TestSearch(t *testing.T) {
+func TestModelSearch(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -572,7 +672,7 @@ func TestSearch(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestSetData(t *testing.T) {
+func TestModelSetData(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -580,7 +680,7 @@ func TestSetData(t *testing.T) {
 
 	model = makeFilteringModel()
 
-	data := make(map[string]interface{})
+	data := make(map[interface{}]interface{})
 	data["w00t"] = 1
 	model.SetData(data)
 	expect = data
@@ -588,7 +688,7 @@ func TestSetData(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestSetUID(t *testing.T) {
+func TestModelSetUID(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -602,7 +702,7 @@ func TestSetUID(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestSetUIDType(t *testing.T) {
+func TestModelSetUIDType(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -610,18 +710,18 @@ func TestSetUIDType(t *testing.T) {
 
 	model = makeFilteringModel()
 
-	model.SetUIDType(ConstTypeInt)
-	expect = ConstTypeInt
+	model.SetUIDType(ConstIdentifierTypeInt)
+	expect = ConstIdentifierTypeInt
 	actual = model.GetUIDType()
 	assert(t, expect, actual, err)
 
-	model.SetUIDType(ConstTypeString)
-	expect = ConstTypeString
+	model.SetUIDType(ConstIdentifierTypeString)
+	expect = ConstIdentifierTypeString
 	actual = model.GetUIDType()
 	assert(t, expect, actual, err)
 }
 
-func TestString(t *testing.T) {
+func TestModelString(t *testing.T) {
 	var expect interface{}
 	var actual interface{}
 	var err error
@@ -634,8 +734,8 @@ func TestString(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestTransform(t *testing.T) {
-	var expect map[string]interface{}
+func TestModelTransform(t *testing.T) {
+	var expect map[interface{}]interface{}
 	var actual interface{}
 	var err error
 	var model *Model
@@ -647,7 +747,7 @@ func TestTransform(t *testing.T) {
 	model.Set("four", 4)
 	model.Set("five", 5)
 
-	expect = make(map[string]interface{})
+	expect = make(map[interface{}]interface{})
 	expect["one"] = 2
 	expect["two"] = 3
 	expect["three"] = 4
@@ -661,8 +761,8 @@ func TestTransform(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestUnique(t *testing.T) {
-	var expect map[string]interface{}
+func TestModelUnique(t *testing.T) {
+	var expect map[interface{}]interface{}
 	var actual interface{}
 	var err error
 	var model *Model
@@ -675,7 +775,7 @@ func TestUnique(t *testing.T) {
 	model.Set("five", 3)
 	model.Unique()
 
-	expect = make(map[string]interface{})
+	expect = make(map[interface{}]interface{})
 	expect["two"] = 1
 	expect["three"] = 2
 	expect["five"] = 3
@@ -683,8 +783,8 @@ func TestUnique(t *testing.T) {
 	assert(t, expect, actual, err)
 }
 
-func TestWalk(t *testing.T) {
-	var expect map[string]interface{}
+func TestModelWalk(t *testing.T) {
+	var expect map[interface{}]interface{}
 	var actual interface{}
 	var err error
 	var model *Model
@@ -696,7 +796,7 @@ func TestWalk(t *testing.T) {
 	model.Set("four", 4)
 	model.Set("five", 5)
 
-	expect = make(map[string]interface{})
+	expect = make(map[interface{}]interface{})
 	expect["one"] = 2
 	expect["two"] = 3
 	expect["three"] = 4
