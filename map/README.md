@@ -1,0 +1,1 @@
+This is a toy to play with map logic implementations
