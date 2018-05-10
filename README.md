@@ -1,2 +1,2 @@
 # go
-Things in go
+go junk
